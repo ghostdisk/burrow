@@ -4,12 +4,14 @@ import { read_file } from './tools/read_file';
 import { write_file } from './tools/write_file';
 import { edit_file } from './tools/edit_file';
 import { bash } from './tools/bash';
+import { eval_js } from './tools/eval';
 
 const tools: Record<string, Tool> = {
   read_file,
   write_file,
   edit_file,
   bash,
+  eval: eval_js,
 };
 
 export const systemPrompt = 
@@ -28,6 +30,10 @@ You have access to the following tools:
 - write_file
 - edit_file
 - bash
+- eval (execute arbitrary JS — supports async, can use fetch, require, etc.)
+
+  read_file('/home/alex/burrow/js/browser.js', { start: 1, end: 50 }) // IMPORTANT: Read the API before proceding!!!
+  b = await import('${import.meta.dir}/js/browser.js');
 `;
 
 export async function iter({ messages, onStream, onMessage }: { messages: Message[], onStream?: LLMStreamCallback, onMessage: (message: Message, opts: Record<string, any>) => void }) {
@@ -66,7 +72,9 @@ export async function iter({ messages, onStream, onMessage }: { messages: Messag
           response.role = 'tool';
           response.tool_call_id = tc.id;
 
-          // onMessage(response, { error: true });
+          if (tc.function.name === 'eval' || tc.function.name === 'bash') {
+            onMessage(response, { error: true });
+          }
           messages.push(response);
         } catch (err) {
           const msg: Message = {
