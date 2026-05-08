@@ -32,8 +32,9 @@ You have access to the following tools:
 - bash
 - eval (execute arbitrary JS — supports async, can use fetch, require, etc.)
 
-  read_file('/home/alex/burrow/js/browser.js', { start: 1, end: 50 }) // IMPORTANT: Read the API before proceding!!!
-  b = await import('${import.meta.dir}/js/browser.js');
+If you want to browse the web:
+  read_file '/home/alex/burrow/js/browser.js', { start: 1, end: 50 }) // IMPORTANT: Read the API before proceding!!!
+  eval b = await import('${import.meta.dir}/js/browser.js');
 `;
 
 export async function iter({ messages, onStream, onMessage }: { messages: Message[], onStream?: LLMStreamCallback, onMessage: (message: Message, opts: Record<string, any>) => void }) {
