@@ -37,17 +37,47 @@ If you want to browse the web:
   eval b = await import('${import.meta.dir}/js/browser.js');
 `;
 
-export async function iter({ messages, onStream, onMessage }: { messages: Message[], onStream?: LLMStreamCallback, onMessage: (message: Message, opts: Record<string, any>) => void }) {
+let currentInterrupt: (() => void) | null = null;
 
+export function interrupt() {
+  if (currentInterrupt) {
+    currentInterrupt();
+    currentInterrupt = null;
+  }
+}
+
+const INTERRUPT_NOTE = "\n\n[User interrupted this request]";
+
+export async function iter({ messages, onStream, onMessage }: { messages: Message[], onStream?: LLMStreamCallback, onMessage: (message: Message, opts: Record<string, any>) => void }) {
   while (true) {
     let loop = false;
 
-    const { message } = await llm({
+    const llmCall = llm({
       messages,
       tools: Object.values(tools),
       onStream,
       thinking: true,
     });
+
+    currentInterrupt = llmCall.interrupt;
+    const { message, interrupted } = await llmCall.wait();
+    currentInterrupt = null;
+
+    if (interrupted) {
+      if (message.content.length) {
+        message.content += INTERRUPT_NOTE;
+      } else if (message.reasoning_content?.length) {
+        // Move reasoning into content so the model can see it next turn
+        // (reasoning_content is an output-only field, not read on input)
+        message.content = "[Interrupted thinking]\n\n" + message.reasoning_content + INTERRUPT_NOTE;
+        message.reasoning_content = "";
+      }
+      if (message.role === "unknown") message.role = "assistant";
+
+      messages.push(message);
+      break;
+    }
+
     messages.push(message);
 
     if (message.tool_calls) {

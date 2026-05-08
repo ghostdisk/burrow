@@ -1,5 +1,4 @@
-import { Readline } from "node:readline/promises";
-import { iter, systemPrompt } from "./agent";
+import { iter, systemPrompt, interrupt } from "./agent";
 import { Message } from "./llm";
 import * as readline from 'node:readline/promises';
 import { stdin, stdout } from "node:process";
@@ -68,6 +67,11 @@ function print(text: string, newMode: PrintMode) {
   newlines = 0;
 }
 
+stdin.on('data', function (data: Buffer) {
+  if (data.length === 1 && data[0] === 0x1b) {
+    interrupt();
+  }
+});
 
 for (;;) {
   print('', 'user');
@@ -103,6 +107,10 @@ for (;;) {
       }
     },
     onMessage: (msg: Message, opts) => {
+      if (opts?.interrupted) {
+        printNewLine(2);
+        print(`\n[User interrupted this request]`, 'error');
+      }
       if (opts?.error) {
         printNewLine(2);
         print(`${msg.content}`, 'error');
