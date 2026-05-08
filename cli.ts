@@ -5,23 +5,23 @@ import * as readline from 'node:readline/promises';
 import { stdin, stdout } from "node:process";
 import fs from 'node:fs/promises';
 
-const convoFile = process.argv[2];
+const sessionFile = process.argv[2];
 
 let messages: Message[];
 
-if (convoFile) {
+if (sessionFile) {
   try {
-    const data = await fs.readFile(convoFile, { encoding: 'utf-8' });
+    const data = await fs.readFile(sessionFile, { encoding: 'utf-8' });
     messages = JSON.parse(data);
-    console.log(`Loaded conversation from ${convoFile} (${messages.length} messages).`);
+    console.log(`Loaded session from ${sessionFile} (${messages.length} messages).`);
   } catch (err: any) {
     if (err.code === 'ENOENT') {
       messages = [
         { role: 'system', content: systemPrompt },
       ];
-      console.log(`Starting new conversation (will save to ${convoFile}).`);
+      console.log(`Starting new session (will save to ${sessionFile}).`);
     } else {
-      console.error(`Error loading ${convoFile}:`, err.message);
+      console.error(`Error loading ${sessionFile}:`, err.message);
       process.exit(1);
     }
   }
@@ -110,7 +110,7 @@ for (;;) {
     },
   });
 
-  if (convoFile) {
-    await fs.writeFile(convoFile, JSON.stringify(messages, null, 2), { encoding: 'utf-8' });
+  if (sessionFile) {
+    await fs.writeFile(sessionFile, JSON.stringify(messages, null, 2), { encoding: 'utf-8' });
   }
 }

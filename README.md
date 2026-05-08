@@ -44,7 +44,7 @@ echo 'DEEPSEEK_API_KEY=sk-your-key-here' > .env
 bun run cli.ts
 
 # Resume a saved session
-bun run cli.ts convo.json
+bun run cli.ts session.json
 ```
 
 ## Architecture
