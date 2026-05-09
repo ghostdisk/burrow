@@ -43,11 +43,11 @@ echo 'DEEPSEEK_API_KEY=sk-your-key-here' > .env
 ### Run
 
 ```bash
-# Start a new session
-bun run cli.ts
+# Start a new session (with hot-reload — code changes apply instantly)
+bun --hot cli.ts
 
 # Resume a saved session
-bun run cli.ts session.json
+bun --hot cli.ts session.json
 ```
 
 ## Architecture
