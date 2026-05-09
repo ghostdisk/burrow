@@ -11,7 +11,7 @@ Search engines, read pages, and extract data from the web using Playwright (Chro
 
 Load the browser module:
 ```js
-eval b = await import('/home/alex/burrow/js/browser.js');
+eval b = await burrowImport('./path/to/skill/scripts/browser.js');
 ```
 
 ## API
@@ -30,7 +30,7 @@ eval b = await import('/home/alex/burrow/js/browser.js');
 ## Typical Flow (sequential — recommended)
 
 ```js
-const b = await import('/home/alex/burrow/js/browser.js');
+const b = await import('./skills/browser/scripts/browser.js');
 const results = await b.search("my query");
 const tab = await b.openTab("https://" + results[0].url);
 const text = await b.pageText(tab.page);       // ← await it! .slice() etc. now works

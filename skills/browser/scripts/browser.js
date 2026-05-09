@@ -1,5 +1,5 @@
 /*
-  Burrow browser helpers — import with: b = await import('/path/to/js/browser.js')
+  Burrow browser helpers — import with: b = await import('./skills/browser/scripts/browser.js')
 
   ── API ─────────────────────────────────────────────────────────────────
     search(query): Promise<{title, snippet, url, source}[]>   search 4 engines, deduped
