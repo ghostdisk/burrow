@@ -6,7 +6,7 @@ import { write_file } from './tools/write_file';
 import { edit_file } from './tools/edit_file';
 import { bash } from './tools/bash';
 import { eval_js } from './tools/eval';
-import { discoverSkills, formatSkillsPrompt } from './tools/skills';
+import { discoverSkills, formatSkillsPrompt } from './skills';
 
 const tools: Record<string, Tool> = {
   read_file,

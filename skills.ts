@@ -8,10 +8,6 @@ export interface SkillSummary {
   path: string; // absolute path to skill directory
 }
 
-/**
- * Parse YAML frontmatter from SKILL.md content.
- * Only extracts name and description (the discovery fields).
- */
 function parseFrontmatter(content: string): { name: string; description: string } | null {
   const match = content.match(/^---\n([\s\S]*?)\n---/);
   if (!match) return null;
@@ -36,10 +32,6 @@ function parseFrontmatter(content: string): { name: string; description: string 
   return { name: frontmatter.name, description: frontmatter.description };
 }
 
-/**
- * Scan the skills/ directory and return summaries of all discovered skills.
- * Returns empty array if skills/ doesn't exist.
- */
 export async function discoverSkills(skillsDir: string): Promise<SkillSummary[]> {
   let entries: Dirent[];
   try {
@@ -74,9 +66,6 @@ export async function discoverSkills(skillsDir: string): Promise<SkillSummary[]>
   return skills;
 }
 
-/**
- * Build the skills section of the system prompt.
- */
 export function formatSkillsPrompt(skills: SkillSummary[], skillsDir: string): string {
   if (skills.length === 0) return '';
 
