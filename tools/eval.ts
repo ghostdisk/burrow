@@ -1,36 +1,19 @@
 import { type Message, type Tool } from '../llm';
 
-// Persistent scope for eval — bare assignments survive across calls.
-// Like a REPL: `x = 5` persists, `let x = 5` is temporary.
-(globalThis as any).__scope ??= {};
-(globalThis as any).__ctx ??= new Proxy((globalThis as any).__scope, {
-  get(target: any, prop: string) {
-    if (prop in target) return target[prop];
-    return (globalThis as any)[prop];
-  },
-  set(target: any, prop: string, value: any) {
-    target[prop] = value;
-    return true;
-  },
-  has(target: any, prop: string) {
-    return prop in target || prop in (globalThis as any);
-  },
-});
-
 export const eval_js: Tool = {
   name: 'eval',
-  description: `Execute arbitrary JavaScript code in the Bun process. Bare assignments persist across calls, let/const/var are temporary.
+  description: `Execute arbitrary JavaScript code in the Bun process.
+Bare assignments are written to globalThis and persist among calls and hot reloads.
 
 Examples:
-  - "42" → 42
-  - "const resp = await fetch('https://api.example.com'); return resp.status" → 200
+  - "resp = await fetch('https://example.com'); return resp.status" → 200
   - "fs = await import('node:fs'); return fs.readdirSync('.')" → ["agent.ts","cli.ts",...]`,
   parameters: {
     type: 'object',
     properties: {
       code: {
         type: 'string',
-        description: 'JavaScript code to execute. Wrapped in an async function, so await and return are supported.',
+        description: 'JavaScript code to execute. Wrapped in an async function, await and return are supported.',
       },
     },
     required: ['code'],
@@ -39,7 +22,7 @@ Examples:
     const code: string = args.code;
 
     try {
-      const result = await (0, eval)(`(async () => { with (__ctx) {\n${code}\n} })()`);
+      const result = await (0, eval)(`(async () => { ${code} })()`);
 
       return {
         role: 'tool',
