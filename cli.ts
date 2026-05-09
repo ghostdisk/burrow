@@ -1,4 +1,4 @@
-import { iter, systemPrompt, interrupt } from "./agent";
+import { systemPrompt, Agent } from "./agent";
 import { Message } from "./llm";
 import * as readline from 'node:readline/promises';
 import { stdin, stdout } from "node:process";
@@ -6,16 +6,16 @@ import fs from 'node:fs/promises';
 
 const sessionFile = process.argv[2];
 
-let messages: Message[];
+let agent = new Agent();
 
 if (sessionFile) {
   try {
     const data = await fs.readFile(sessionFile, { encoding: 'utf-8' });
-    messages = JSON.parse(data);
-    console.log(`Loaded session from ${sessionFile} (${messages.length} messages).`);
+    agent.messages = JSON.parse(data);
+    console.log(`Loaded session from ${sessionFile} (${agent.messages.length} messages).`);
   } catch (err: any) {
     if (err.code === 'ENOENT') {
-      messages = [
+      agent.messages = [
         { role: 'system', content: systemPrompt },
       ];
       console.log(`Starting new session (will save to ${sessionFile}).`);
@@ -25,7 +25,7 @@ if (sessionFile) {
     }
   }
 } else {
-  messages = [
+  agent.messages = [
     { role: 'system', content: systemPrompt },
   ];
 }
@@ -69,7 +69,7 @@ function print(text: string, newMode: PrintMode) {
 
 stdin.on('data', function (data: Buffer) {
   if (data.length === 1 && data[0] === 0x1b) {
-    interrupt();
+    agent.interrupt();
   }
 });
 
@@ -80,13 +80,12 @@ for (;;) {
   const userMessage = await rl.question('> ');
   newlines++;
 
-  messages.push({
+  agent.messages.push({
     role: 'user',
     content: userMessage,
   });
 
-  await iter({
-    messages,
+  await agent.run({
     onStream: (data, delta) => {
       if (delta.reasoning_content) {
         print(delta.reasoning_content, 'thinking');
@@ -119,6 +118,6 @@ for (;;) {
   });
 
   if (sessionFile) {
-    await fs.writeFile(sessionFile, JSON.stringify(messages, null, 2), { encoding: 'utf-8' });
+    await fs.writeFile(sessionFile, JSON.stringify(agent.messages, null, 2), { encoding: 'utf-8' });
   }
 }
