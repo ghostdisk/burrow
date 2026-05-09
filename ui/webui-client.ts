@@ -507,6 +507,20 @@ function handleNewAgent(data: AgentData, select: boolean = false) {
 
   // Render existing messages
   for (const msg of data.messages) {
+    // Reconstruct tool call meta from assistant tool_calls (needed on reload)
+    if (msg.role === 'assistant' && msg.tool_calls) {
+      for (const tc of msg.tool_calls) {
+        if (tc.id && tc.function?.name) {
+          let args: any = {};
+          try { args = JSON.parse(tc.function.arguments || '{}'); } catch {}
+          agent.toolCallMeta.set(tc.id, { name: tc.function.name, args });
+        }
+      }
+    }
+    if (msg.role === 'tool' && msg.tool_call_id) {
+      msg._toolMeta = agent.toolCallMeta.get(msg.tool_call_id);
+    }
+
     const el = createMessageEl(msg);
     if (!el) continue;
     if (msg.custom?.id) agent.messageEls.set(msg.custom.id, el);
