@@ -3,21 +3,21 @@ import fs from 'node:fs/promises';
 
 export const edit_file: Tool = {
   name: 'edit_file',
-  description: 'Edit a file by replacing old_string with new_string. The old_string must match exactly (whitespace-sensitive). Use after reading the file to get exact text.',
+  description: 'Edit a file by replacing old_string with new_string. The old_string must match exactly (whitespace-sensitive). Use after reading the file to get exact text. Prefer using this over write_file for editing.',
   parameters: {
     type: 'object',
     properties: {
       'path': {
         type: 'string',
-        description: 'Path of the file, either relative or absolute.',
+        description: 'File Path, relative or absolute',
       },
       'old_string': {
         type: 'string',
-        description: 'The exact text to replace.',
+        description: 'Exact text to replace',
       },
       'new_string': {
         type: 'string',
-        description: 'The new text to replace it with.',
+        description: 'New text to replace it with',
       },
       'expected_replacements': {
         type: 'number',

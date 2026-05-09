@@ -3,13 +3,13 @@ import fs from 'node:fs/promises';
 
 export const read_file: Tool = {
   name: 'read_file',
-  description: 'Read an entire file.',
+  description: 'Read a file.',
   parameters: {
     type: 'object',
     properties: {
       'path': {
         type: 'string',
-        description: 'Path of the file, either relative or absolute.',
+        description: 'Path of the file, relative or absolute',
       },
       'start': {
         type: 'number',
@@ -17,7 +17,7 @@ export const read_file: Tool = {
       },
       'end': {
         type: 'number',
-        description: 'Optional. Ending line number (1-indexed)',
+        description: 'Optional. Ending line number',
       },
     },
   },

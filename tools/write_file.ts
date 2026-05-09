@@ -4,17 +4,17 @@ import path from 'node:path';
 
 export const write_file: Tool = {
   name: 'write_file',
-  description: 'Write content to a file. Creates the file if it does not exist, overwrites if it does. Parent directories are created automatically by default.',
+  description: 'Write content to a file. Creates the file if it does not exist, overwrites if it does.',
   parameters: {
     type: 'object',
     properties: {
       'path': {
         type: 'string',
-        description: 'Path of the file, either relative or absolute.',
+        description: 'Path of the file, relative or absolute.',
       },
       'content': {
         type: 'string',
-        description: 'Content to write to the file.',
+        description: 'Content to write',
       },
       'create_dirs': {
         type: 'boolean',
