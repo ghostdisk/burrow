@@ -13,7 +13,8 @@ Burrow is a minimalist AI agent built with **Bun** and **TypeScript**, powered b
   - `edit_file` — precise string-based find-and-replace
   - `bash` — run shell commands with configurable cwd and timeout
   - `eval` — execute arbitrary JS in-process with REPL-like persistent scope
-- **Browser automation** — search engines, read pages, extract data (via optional Playwright module)
+- **Agent Skills** — portable, version-controlled skill folders (agentskills.io spec) with scripts, references, and assets
+- **Built-in browser skill** — search across 4 engines (deduped), open pages, extract text/HTML (via optional Playwright)
 - **Thinking mode** — see the agent's reasoning in real time
 - **Persistent conversations** — save and resume sessions via JSON files
 - **Streaming output** — color-coded ANSI output for thinking, tool calls, content, and errors
@@ -61,9 +62,13 @@ burrow/
 │   ├── read_file.ts  # Read files with line ranges
 │   ├── write_file.ts # Create/overwrite files
 │   ├── edit_file.ts  # Find-and-replace editing
-│   └── bash.ts       # Shell command execution
-├── js/
-│   └── browser.js    # Optional Playwright browser automation helpers
+│   ├── bash.ts       # Shell command execution
+│   └── skills.ts     # Agent Skills loader
+├── skills/
+│   └── browser/      # Browser automation skill
+│       ├── SKILL.md      # Skill instructions (loaded by agent on demand)
+│       └── scripts/
+│           └── browser.js  # Playwright helpers (search, open, extract)
 ├── .env              # API key (gitignored)
 └── package.json
 ```

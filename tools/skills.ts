@@ -83,23 +83,17 @@ export function formatSkillsPrompt(skills: SkillSummary[], skillsDir: string): s
   const lines: string[] = [];
   lines.push('## Agent Skills');
   lines.push('');
-  lines.push('You have access to Agent Skills — portable, version-controlled folders that give you specialized knowledge and workflows. Skills follow the agentskills.io spec.');
+  lines.push(
+    `You have access to Agent Skills — specialized knowledge and workflows in \`${skillsDir}/\`. ` +
+    `Each skill is a folder with \`SKILL.md\` (full instructions), \`scripts/\`, \`references/\`, and \`assets/\`. ` +
+    `When a task matches a skill's description, activate it by reading its \`SKILL.md\` and following the instructions.`
+  );
   lines.push('');
   lines.push('### Available skills');
   lines.push('');
   for (const skill of skills) {
     lines.push(`- **${skill.name}**: ${skill.description}`);
   }
-  lines.push('');
-  lines.push('### How to use skills');
-  lines.push('');
-  lines.push(`Skills are located in \`${skillsDir}/\`. Each skill is a folder containing:`);
-  lines.push('- `SKILL.md` — the full skill instructions (load this when the skill is activated)');
-  lines.push('- `scripts/` — executable code the skill may use');
-  lines.push('- `references/` — additional documentation');
-  lines.push('- `assets/` — templates and resources');
-  lines.push('');
-  lines.push('When a task matches a skill\'s description, activate it by reading its `SKILL.md` file, then follow the instructions. Load other skill files as needed.');
 
   return lines.join('\n');
 }

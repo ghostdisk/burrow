@@ -1,13 +1,26 @@
 import { type Message, type Tool } from '../llm';
+import path from 'node:path';
+
+// import() in eval resolves relative to this file (tools/eval.ts), not cwd.
+// Provide burrowImport() which resolves relative paths from process.cwd() instead.
+globalThis.burrowImport ??= (p: string) => {
+  if (p.startsWith('.')) p = path.resolve(process.cwd(), p);
+  return import(p);
+};
 
 export const eval_js: Tool = {
   name: 'eval',
   description: `Execute arbitrary JavaScript code in the Bun process.
 Bare assignments are written to globalThis and persist among calls and hot reloads.
 
+Note: dynamic import() resolves relative to tools/eval.ts, not cwd.
+Use burrowImport('./relative/path') to import relative to cwd instead.
+Built-in modules and absolute paths work fine with plain import().
+
 Examples:
   - "resp = await fetch('https://example.com'); return resp.status" → 200
-  - "fs = await import('node:fs'); return fs.readdirSync('.')" → ["agent.ts","cli.ts",...]`,
+  - "fs = await import('node:fs'); return fs.readdirSync('.')" → ["agent.ts","cli.ts",...]
+  - "b = await burrowImport('./skills/browser/scripts/browser.js')" → loads from cwd`,
   parameters: {
     type: 'object',
     properties: {
