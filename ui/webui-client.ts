@@ -144,12 +144,12 @@ function renderDiff(oldStr: string, newStr: string): HTMLDivElement {
 
   const oldEl = document.createElement('div');
   oldEl.classList.add('diff-old');
-  oldEl.textContent = oldStr ? `- ${oldPreview}` : '';
+  oldEl.textContent = oldPreview;
   if (oldStr) container.append(oldEl);
 
   const newEl = document.createElement('div');
   newEl.classList.add('diff-new');
-  newEl.textContent = `+ ${newPreview}`;
+  newEl.textContent = newPreview;
   container.append(newEl);
 
   return container;
