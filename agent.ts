@@ -31,7 +31,7 @@ When you write changes to your own code, they're applied to you instantly with h
 Location of your source code: ${import.meta.dir}
 
 browser.js: If you want to browse the web:
-  read_file '/home/alex/burrow/js/browser.js', { start: 1, end: 50 }) // IMPORTANT: Read the API before proceding!!!
+  read_file '/home/alex/burrow/js/browser.js', { start: 1, end: 50 } // IMPORTANT: Read the API before proceding!!!
   eval b = await import('${import.meta.dir}/js/browser.js');
 `;
 
@@ -78,6 +78,9 @@ export class Agent {
       this.currentInterrupt = null;
 
       if (interrupted) {
+        // Strip tool_calls since they won't be executed.
+        delete message.tool_calls;
+
         if (message.content.length) {
           message.content += INTERRUPT_NOTE;
         } else if (message.reasoning_content?.length) {
