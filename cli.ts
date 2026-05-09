@@ -1,4 +1,4 @@
-import { systemPrompt, buildSystemPrompt, Agent, AgentUI } from "./agent";
+import { buildSystemPrompt, Agent, AgentUI } from "./agent";
 import { Message } from "./llm";
 import * as readline from 'node:readline/promises';
 import { stdin, stdout } from "node:process";

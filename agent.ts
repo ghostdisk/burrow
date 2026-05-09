@@ -48,7 +48,7 @@ export async function buildSystemPrompt(): Promise<string> {
 }
 
 // Synchronous fallback for backward compatibility (no skills section).
-export const systemPrompt = basePrompt;
+const systemPrompt = basePrompt;
 
 const INTERRUPT_NOTE = "\n\n[User interrupted this request]";
 
