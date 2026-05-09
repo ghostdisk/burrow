@@ -111,6 +111,7 @@ async function main() {
 
   // Track interrupts per agent
   const interruptFlags = new WeakMap<Agent, boolean>();
+  let chatCounter = loadedAgents.length;
 
   Bun.serve({
     port: 3000,
@@ -171,6 +172,24 @@ async function main() {
                 interrupted: interruptFlags.get(agent) || false,
               });
               saveAgent(agent);
+            });
+            break;
+          }
+          case 'create_agent': {
+            chatCounter++;
+            const agent = new Agent({
+              name: `Chat ${chatCounter}`,
+              messages: [createMessage('system', Agents.systemPrompt)],
+            });
+            agent.ui = makeAgentUI(agent);
+            saveAgent(agent);
+            broadcast({
+              type: 'agent_created',
+              agent: {
+                id: agent.id,
+                name: agent.name,
+                messages: agent.messages,
+              },
             });
             break;
           }

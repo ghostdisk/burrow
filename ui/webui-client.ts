@@ -272,11 +272,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   btn.addEventListener('click', sendOrInterrupt);
+
+  document.getElementById('new-chat')!.addEventListener('click', () => {
+    ws.send(JSON.stringify({ type: 'create_agent' }));
+  });
 });
 
 // --- Connection ---
 
-function handleNewAgent(data: AgentData) {
+function handleNewAgent(data: AgentData, select: boolean = false) {
   const agent: AgentState = {
     data,
     button: null!,
@@ -309,7 +313,7 @@ function handleNewAgent(data: AgentData) {
 
   agents.push(agent);
 
-  if (!selectedAgent) selectAgent(agent);
+  if (select || !selectedAgent) selectAgent(agent);
 }
 
 function manageConnection() {
@@ -348,6 +352,10 @@ function manageConnection() {
           agent.streamingMsgId = null;
         }
         addMessage(agent, msg.message);
+        break;
+      }
+      case 'agent_created': {
+        handleNewAgent(msg.agent, true);
         break;
       }
       case 'done': {

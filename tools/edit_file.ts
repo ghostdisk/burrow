@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 
 export const edit_file: Tool = {
   name: 'edit_file',
-  description: 'Edit a file by replacing old_string with new_string. The old_string must match exactly (whitespace-sensitive). Use after reading the file to get exact text. Prefer using this over write_file for editing.',
+  description: 'Edit a file by replacing old_string with new_string. The old_string must match exactly (whitespace-sensitive). Prefer this over write_file for editing. Prefer targeted edits over giant rewrites.',
   parameters: {
     type: 'object',
     properties: {
@@ -13,7 +13,7 @@ export const edit_file: Tool = {
       },
       'old_string': {
         type: 'string',
-        description: 'Exact text to replace',
+        description: 'Exact text to find and replace. Use the shortest unique snippet — one or two lines is often enough. The tool errors if the match is ambiguous, so you can safely try small strings and add context if needed.',
       },
       'new_string': {
         type: 'string',
