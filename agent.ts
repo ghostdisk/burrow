@@ -1,4 +1,4 @@
-import { llm, LLMStreamCallback, Message, Tool } from './llm';
+import { createMessage, llm, LLMStreamCallback, Message, Tool } from './llm';
 import process from 'node:process';
 import path from 'node:path';
 import { read_file } from './tools/read_file';
@@ -20,31 +20,37 @@ export interface AgentUI {
   onStream: LLMStreamCallback;
 }
 
-export let systemPrompt =
-`You are Burrow 🐰, a friendly AI agent.
+export const Agents = {
+  init,
+  initialized: false,
+  all: [] as Agent[],
+  systemPrompt: "",
+};
 
-Be helpful, precise, and concise. You thrive on solving real tasks.
+let basePrompt =
+`You are Burrow, a friendly AI agent.
 
-You can read, write, and edit files, as well as run shell commands.
+## Style and Persioanlity
+
+- Rule 0: We're here to learn, create, improve ourselves, have a blast and build cool shit nobody has built before.
+- Be curious. Don't take the easy way out and guess - learn, and understand. You have versitile and powerful tools. If that's not enough, ask the user. Read the docs. Search the web.
+- Be concise. If the answer fits in one sentence, one sentence is what it gets.
+- Don't be overly sycophantic. No need for "That's a great question, you're truly getting to the heart of it!". Just answer the question. Don't praise every little thing, praise should be earned.
+- Call out dumb shit. If the user tells you to proceed with it anyway, assume they have good reasons and proceed with it.
+
 Cwd: ${process.cwd()}
-
-You can introspect and modify your own source code to improve yourself.
-When you write changes to your own code, they're applied to you instantly with hot reload.
-Location of your source code: ${import.meta.dir}
-`;
+Location of your source code: ${import.meta.dir}`;
 
 const SKILLS_DIR = path.join(import.meta.dir, 'skills');
 const INTERRUPT_NOTE = "\n\n[User interrupted this request]";
 
-// Root context sits between globalThis and agent contexts.
-// Bare assignments in eval write to the agent's context, shadowing members of rootContext/globalThis.
-// Use rootContext.shared for intentional cross-agent communication.
 export const rootContext: Record<string, any> = Object.create(globalThis);
 rootContext.shared = Object.create(null);
 
-let initialized = false;
 
 export class Agent {
+  id: string;
+  name: string;
   messages: Message[];
   currentStreamingMessage?: Partial<Message>;
   ui?: AgentUI;
@@ -56,16 +62,20 @@ export class Agent {
 
   context: Record<string, any>;
 
-  constructor({ messages, ui }: { messages: Message[], ui?: AgentUI }) {
-    if (!initialized)
-      throw new Error("Attempting to create an agent before initAgent() is finished.");
+  constructor({ name, messages, ui }: { name: string, messages: Message[], ui?: AgentUI }) {
+    if (!Agents.initialized)
+      throw new Error("Attempting to create an agent before Agents.init() is finished.");
 
+    const self = this;
+    Agents.all.push(self);
+
+    this.id = crypto.randomUUID();
+    this.name = name;
     this.tools = tools;
     this.ui = ui;
     this.messages = messages;
     this.context = Object.create(rootContext);
     this.context.outputBuffer = '';
-    const self = this;
     this.context.console = {
       _write(method: string, args: any[]) {
         self.context.outputBuffer += args.map(a => {
@@ -176,11 +186,9 @@ export class Agent {
         for (const tc of message.tool_calls || []) {
           const tool = this.tools[tc.function.name];
           if (!tool) {
-            const msg: Message = {
-              role: 'tool',
-              tool_call_id: tc.id,
-              content: `error: tool "${tc.function.name}" does not exist`,
-            };
+            const msg: Message = createMessage('tool', '');
+            msg.tool_call_id = tc.id;
+            msg.content = `error: tool "${tc.function.name}" does not exist`;
             onMessage?.(msg, { error: true });
             this.messages.push(msg);
             break;
@@ -201,11 +209,9 @@ export class Agent {
             this.messages.push(response);
           } catch (err) {
             delete this._currentToolCall;
-            const msg: Message = {
-              role: 'tool',
-              tool_call_id: tc.id,
-              content: `error during tool call :(\n${err}`,
-            };
+            const msg: Message = createMessage('tool', '');
+            msg.tool_call_id = tc.id;
+            msg.content = `error during tool call :(\n${err}`;
             onMessage?.(msg, { error: true });
             this.messages.push(msg);
           }
@@ -217,13 +223,12 @@ export class Agent {
   }
 }
 
-export async function initAgent() {
-  if (initialized) return;
+async function init() {
+  if (Agents.initialized) return;
 
   const skills = await discoverSkills(SKILLS_DIR);
   const skillsSection = formatSkillsPrompt(skills, SKILLS_DIR);
 
-  systemPrompt = systemPrompt + '\n' + skillsSection;
-
-  initialized = true;
+  Agents.systemPrompt = basePrompt + '\n' + skillsSection;
+  Agents.initialized = true;
 }

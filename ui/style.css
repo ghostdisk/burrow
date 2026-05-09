@@ -1,0 +1,90 @@
+* {
+  margin: 0;
+}
+
+html {
+  height: 100%;
+
+  --bg0: rgb(40, 46, 40);
+  --bg1: rgb(47, 56, 47);
+  --bg2: rgb(67, 82, 67);
+  --bg3: rgb(78, 98, 78);
+  --bg4: rgb(93, 113, 93);
+  --text: rgb(240, 240, 240);
+  --error0: rgb(184, 49, 8);
+  --error1: rgb(221, 97, 60);
+}
+
+body {
+  height: 100%;
+  background-color: var(--bg0);
+  color: var(--text);
+}
+
+#page {
+  height: 100%;
+  display: flex;
+}
+
+#sidebar {
+  border-right: 1px solid var(--bg2);
+  background-color: var(--bg1);
+  width: 250px;
+}
+
+#sidebar h3 {
+  border-bottom: 1px solid var(--bg2);
+  padding: 4px 8px;
+}
+
+#main {
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: scroll;
+}
+
+.chat {
+  margin: 8px;
+}
+
+.message {
+  background: var(--bg1);
+  padding: 8px;
+
+}
+
+#connection-overlay {
+  background-color: var(--error0);
+  border: 1px solid var(--error1);
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  padding: 4px 8px;
+  transform: translate(-50%, 0);
+}
+
+.hidden {
+  display: none !important;
+}
+
+#chats-list {
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#chats-list > * {
+  padding: 3px 6px;
+}
+
+.button {
+  background-color: var(--bg2);
+  border: 1px solid var(--bg3);
+  cursor: pointer;
+}
+
+.button:hover, .button.active {
+  background-color: var(--bg3);
+  border-color: var(--bg4);
+}

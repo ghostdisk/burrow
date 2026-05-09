@@ -1,5 +1,5 @@
-import { Agent, AgentUI, initAgent, systemPrompt } from "./agent";
-import { Message } from "./llm";
+import { Agent, AgentUI, Agents } from "./agent";
+import { createMessage, Message } from "./llm";
 import * as readline from 'node:readline/promises';
 import { stdin, stdout } from "node:process";
 import fs from 'node:fs/promises';
@@ -18,7 +18,6 @@ type BurrowCLIState = {
 };
 
 let state: BurrowCLIState = null!;
-
 
 const agentUI: AgentUI = {
   onStream: (data, delta) => {
@@ -93,7 +92,7 @@ async function init() {
     process.exit(0);
   });
 
-  await initAgent();
+  await Agents.init();
 
   if (!state.rl) state.rl = readline.createInterface({ input: stdin, output: stdout });
   if (!state.writeQueue) state.writeQueue = [];
@@ -102,7 +101,7 @@ async function init() {
   if (state.newlines === undefined) state.newlines = 2;
   if (state.escBound === undefined) state.escBound = false;
 
-  if (!state.agent) state.agent = new Agent({ messages: [], ui: agentUI });
+  if (!state.agent) state.agent = new Agent({ name: 'Root', messages: [], ui: agentUI });
   state.agent.ui = agentUI;
 
   if (!state.sessionFile) {
@@ -116,7 +115,7 @@ async function init() {
       } catch (err: any) {
         if (err.code === 'ENOENT') {
           state.agent.messages = [
-            { role: 'system', content: systemPrompt },
+            createMessage('system', Agents.systemPrompt),
           ];
           console.log(`Starting new session (will save to ${state.sessionFile}).`);
         } else {
@@ -126,7 +125,7 @@ async function init() {
       }
     } else {
       state.agent.messages = [
-        { role: 'system', content: systemPrompt },
+        createMessage('system', Agents.systemPrompt)
       ];
     }
   }
@@ -143,10 +142,7 @@ for (;;) {
   const userMessage = await state.rl.question('> ');
   state.newlines++;
 
-  state.agent.messages.push({
-    role: 'user',
-    content: userMessage,
-  });
+  state.agent.messages.push(createMessage('user', userMessage));
 
   await state.agent.run({
     onMessage: (msg: Message, opts) => {

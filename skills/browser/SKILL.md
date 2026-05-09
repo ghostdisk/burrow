@@ -1,6 +1,6 @@
 ---
 name: browser
-description: Browse the web via Playwright. Search across 4 engines (deduped), open pages, extract text/HTML, and run JS in page context. Use when the user asks you to look something up on the web, search for information, read a webpage, or extract data from a site.
+description: Browse the web via Playwright. Open pages, extract text/HTML, run JS in page context and search the web. Use when the user asks you search the web, read a webpage, or when you yourself can't figure out something and need to search the web.
 ---
 
 # Browser Automation

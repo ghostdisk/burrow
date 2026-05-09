@@ -70,6 +70,7 @@ export function formatSkillsPrompt(skills: SkillSummary[], skillsDir: string): s
   if (skills.length === 0) return '';
 
   const lines: string[] = [];
+  lines.push('');
   lines.push('## Agent Skills');
   lines.push('');
   lines.push(

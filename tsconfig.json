@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
         "moduleResolution": "bundler",
-        "lib": ["ESNext"],
+        "lib": ["DOM", "DOM.Iterable", "ESNext"],
         "noEmit": true,
         "types": ["bun"],
     }

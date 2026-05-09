@@ -1,7 +1,9 @@
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY!;
 
+export type Role ="system" | "user" | "assistant" | "tool" | "unknown";
+
 export type Message = {
-  role: "system" | "user" | "assistant" | "tool" | "unknown";
+  role: Role,
   content: string;
   reasoning_content?: string;
   tool_call_id?: string;
@@ -14,6 +16,19 @@ export type Message = {
       arguments: string,
     }
   }[],
+  custom: {
+    id: string,
+  },
+}
+
+export function createMessage(role: Role, content: string): Message {
+  return {
+    role,
+    content,
+    custom: {
+      id: crypto.randomUUID(),
+    }
+  };
 }
 
 export type LLMStreamCallback = (data: Partial<Message>, delta: Partial<Message>) => void;
@@ -37,6 +52,12 @@ export type Tool = {
   call: (args: any, agent: any) => Promise<Message>,
 };
 
+function formatMessageForLLM(message: Message): any {
+  const copy: any = { ...message };
+  delete copy.custom;
+  return copy;
+}
+
 export function llm({ tools, messages, thinking, onStream }: LLMOpptions): LLMResponse {
   const controller = new AbortController();
   const stream = !!onStream;
@@ -44,7 +65,7 @@ export function llm({ tools, messages, thinking, onStream }: LLMOpptions): LLMRe
   const wait = async (): Promise<{ message: Message; interrupted: boolean }> => {
     let body = {
       model: "deepseek-v4-pro",
-      messages,
+      messages: messages.map(formatMessageForLLM),
       stream,
     } as any;
 
@@ -74,12 +95,10 @@ export function llm({ tools, messages, thinking, onStream }: LLMOpptions): LLMRe
       });
     } catch (err: any) {
       if (err.name === 'AbortError') {
+        const msg = createMessage('assistant', '');
+        msg.reasoning_content = '';
         return {
-          message: {
-            role: "assistant",
-            content: "",
-            reasoning_content: "",
-          },
+          message: msg,
           interrupted: true,
         };
       }
@@ -97,6 +116,9 @@ export function llm({ tools, messages, thinking, onStream }: LLMOpptions): LLMRe
           role: "unknown",
           content: "",
           reasoning_content: "",
+          custom: {
+            id: "missing",
+          },
         };
 
         let done = false;
@@ -130,6 +152,7 @@ export function llm({ tools, messages, thinking, onStream }: LLMOpptions): LLMRe
 
                 try {
                   const parsed = JSON.parse(data);
+                  message.custom.id = parsed.id;
 
                   const delta = parsed.choices[0].delta;
 
