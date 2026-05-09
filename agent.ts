@@ -31,10 +31,6 @@ Cwd: ${process.cwd()}
 You can introspect and modify your own source code to improve yourself.
 When you write changes to your own code, they're applied to you instantly with hot reload.
 Location of your source code: ${import.meta.dir}
-
-browser.js: If you want to browse the web:
-  read_file '/home/alex/burrow/js/browser.js', { start: 1, end: 50 } // IMPORTANT: Read the API before proceding!!!
-  eval b = await import('${import.meta.dir}/js/browser.js');
 `;
 
 const SKILLS_DIR = path.join(import.meta.dir, 'skills');
