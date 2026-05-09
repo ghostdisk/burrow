@@ -1,53 +1,26 @@
 # Burrow 🐰
 
-> A friendly AI agent that burrows into your tasks.
+🚧🚧🚧 ️ This project is still in early stages of development. It's not meant for general use. 🚧🚧🚧
 
-Burrow is a minimalist AI agent built with **Bun** and **TypeScript**, powered by **DeepSeek**. Five tools, no frameworks, no bloat.
+Burrow is an experimental agent harness. It has only five tools (`read_file`, `write_file`, `edit_file`, `bash`, `eval`), and can be extended by providing JS/TS based skills.
 
-## Features
+`eval` is the most interesting thing about Burrow. The core philosophy is that LLMs are pretty good at writing JavaScript, so we should make it a core part of their interface. Subagents are implemented in 50 lines by giving Burrow access to the `Agent` class, via `eval`. Browser access/web search is implemented in 50 lines by giving it access to `Playwright`, via `eval`.
 
-- **Conversational CLI** — chat with the agent in your terminal with live streaming
-- **Five built-in tools**:
-  - `read_file` — read any file with line-range support
-  - `write_file` — create or overwrite files (auto-creates parent directories)
-  - `edit_file` — precise string-based find-and-replace
-  - `bash` — run shell commands with configurable cwd and timeout
-  - `eval` — execute arbitrary JS in-process with per-agent isolated context
-- **Agent Skills** — portable, version-controlled skill folders (agentskills.io spec) with scripts, references, and assets
-- **Built-in skills**: browser (Playwright web search/scraping) and subagent (spawn independent sibling agents)
-- **Thinking mode** — see the agent's reasoning in real time
-- **Persistent conversations** — save and resume sessions via JSON files
-- **Streaming output** — color-coded ANSI output for thinking, tool calls, content, and errors
-
-## Quick Start
-
-### Prerequisites
-
-- [Bun](https://bun.sh) ≥ 1.3
-- A DeepSeek API key
+Expect rough edges all around:
+- There's no TUI yet, the CLI is very minimal and jank.
+- Full YOLO, no permission system.
+- Currently only DeepSeek API is supported, as it's what I'm using right now.
 
 ### Setup
 
 ```bash
-# Clone and enter
-git clone <repo-url> burrow
+git clone https://github.com/ghostdisk/burrow.git burrow
 cd burrow
-
-# Install dependencies
 bun install
-
-# Set your API key
 echo 'DEEPSEEK_API_KEY=sk-your-key-here' > .env
-```
 
-### Run
-
-```bash
-# Start a new session (with hot-reload — code changes apply instantly)
-bun --hot cli.ts
-
-# Resume a saved session
-bun --hot cli.ts session.json
+# run
+bun --hot cli.ts sessions/1.json
 ```
 
 ## Architecture
@@ -55,26 +28,18 @@ bun --hot cli.ts session.json
 ```
 burrow/
 ├── agent.ts          # Agent loop, system prompt, tool registry
-├── cli.ts            # Interactive CLI with ANSI-colored streaming
+├── cli.ts            # Interactive CLI
 ├── llm.ts            # DeepSeek API client (streaming, tool calls, thinking)
+│── skills.ts         # Agent Skills loader
 ├── tools/
-│   ├── eval.ts       # JS execution with per-agent isolated context
-│   ├── read_file.ts  # Read files with line ranges
-│   ├── write_file.ts # Create/overwrite files
-│   ├── edit_file.ts  # Find-and-replace editing
-│   ├── bash.ts       # Shell command execution
-│   └── skills.ts     # Agent Skills loader
+│   ├── eval.ts
+│   ├── read_file.ts
+│   ├── write_file.ts
+│   ├── edit_file.ts
+│   ├── bash.ts
 ├── skills/
-│   ├── browser/      # Browser automation skill
-│   │   ├── SKILL.md      # Skill instructions (loaded by agent on demand)
-│   │   └── scripts/
-│   │       └── browser.js  # Playwright helpers (search, open, extract)
-│   └── subagent/     # Subagent skill
-│       ├── SKILL.md      # Skill instructions
-│       └── scripts/
-│           └── subagent.js # Spawn independent child agents
-├── .env              # API key (gitignored)
-└── package.json
+│   ├── browser/
+│   └── subagent/
 ```
 
 ## License
