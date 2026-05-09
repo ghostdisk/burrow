@@ -132,9 +132,12 @@ body {
 
 .message {
   background: var(--bg1);
-  padding: 10px 14px;
   max-width: 85%;
   align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  gap: 8px;
 }
 
 .message.user {
