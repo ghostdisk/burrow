@@ -1,10 +1,12 @@
 import { llm, LLMStreamCallback, Message, Tool } from './llm';
 import process from 'node:process';
+import path from 'node:path';
 import { read_file } from './tools/read_file';
 import { write_file } from './tools/write_file';
 import { edit_file } from './tools/edit_file';
 import { bash } from './tools/bash';
 import { eval_js } from './tools/eval';
+import { discoverSkills, formatSkillsPrompt } from './tools/skills';
 
 const tools: Record<string, Tool> = {
   read_file,
@@ -18,7 +20,7 @@ export interface AgentUI {
   onStream: LLMStreamCallback;
 }
 
-export const systemPrompt =
+const basePrompt =
 `You are Burrow 🐰, a friendly AI agent.
 
 Be helpful, precise, and concise. You thrive on solving real tasks.
@@ -34,6 +36,23 @@ browser.js: If you want to browse the web:
   read_file '/home/alex/burrow/js/browser.js', { start: 1, end: 50 } // IMPORTANT: Read the API before proceding!!!
   eval b = await import('${import.meta.dir}/js/browser.js');
 `;
+
+const SKILLS_DIR = path.join(import.meta.dir, 'skills');
+
+let systemPromptCache: string | null = null;
+
+export async function buildSystemPrompt(): Promise<string> {
+  if (systemPromptCache) return systemPromptCache;
+
+  const skills = await discoverSkills(SKILLS_DIR);
+  const skillsSection = formatSkillsPrompt(skills, SKILLS_DIR);
+
+  systemPromptCache = basePrompt + '\n' + skillsSection;
+  return systemPromptCache;
+}
+
+// Synchronous fallback for backward compatibility (no skills section).
+export const systemPrompt = basePrompt;
 
 const INTERRUPT_NOTE = "\n\n[User interrupted this request]";
 

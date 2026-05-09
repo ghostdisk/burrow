@@ -1,4 +1,4 @@
-import { systemPrompt, Agent, AgentUI } from "./agent";
+import { systemPrompt, buildSystemPrompt, Agent, AgentUI } from "./agent";
 import { Message } from "./llm";
 import * as readline from 'node:readline/promises';
 import { stdin, stdout } from "node:process";
@@ -59,6 +59,8 @@ if (state.escBound === undefined) state.escBound = false;
 if (!state.sessionFile) {
   state.sessionFile = process.argv[2];
 
+  const prompt = await buildSystemPrompt();
+
   if (state.sessionFile) {
     try {
       const data = await fs.readFile(state.sessionFile, { encoding: 'utf-8' });
@@ -67,7 +69,7 @@ if (!state.sessionFile) {
     } catch (err: any) {
       if (err.code === 'ENOENT') {
         state.agent.messages = [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: prompt },
         ];
         console.log(`Starting new session (will save to ${state.sessionFile}).`);
       } else {
@@ -77,7 +79,7 @@ if (!state.sessionFile) {
     }
   } else {
     state.agent.messages = [
-      { role: 'system', content: systemPrompt },
+      { role: 'system', content: prompt },
     ];
   }
 }
