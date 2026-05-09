@@ -53,6 +53,9 @@ Examples:
     try {
       const ctxProxy = makeContextProxy(agent.context);
 
+      // Clear output buffer before execution
+      agent.context.outputBuffer = '';
+
       // new Function() is non-strict, so `with` is allowed.
       // The proxy's `has` trap always returns true, ensuring all bare
       // assignments go to agent.context, not globalThis.
@@ -60,15 +63,19 @@ Examples:
       const fn = new Function(wrappedCode);
       const result = await fn(ctxProxy);
 
-      return {
-        role: 'tool',
-        content: serializeResult(result),
-      };
+      const out = agent.context.outputBuffer;
+      agent.context.outputBuffer = '';
+      const serialized = serializeResult(result);
+      const content = out ? out + serialized : serialized;
+
+      return { role: 'tool', content };
     } catch (err: any) {
-      return {
-        role: 'tool',
-        content: `eval error: ${err.message ?? String(err)}`,
-      };
+      const out = agent.context.outputBuffer;
+      agent.context.outputBuffer = '';
+      const errorMsg = `eval error: ${err.message ?? String(err)}`;
+      const content = out ? out + errorMsg : errorMsg;
+
+      return { role: 'tool', content };
     }
   },
 };

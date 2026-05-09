@@ -64,6 +64,21 @@ export class Agent {
     this.ui = ui;
     this.messages = messages;
     this.context = Object.create(rootContext);
+    this.context.outputBuffer = '';
+    const self = this;
+    this.context.console = {
+      _write(method: string, args: any[]) {
+        self.context.outputBuffer += args.map(a => {
+          if (typeof a === 'string') return a;
+          try { return JSON.stringify(a); } catch { return String(a); }
+        }).join(' ') + '\n';
+      },
+      log(...args: any[]) { this._write('log', args); },
+      error(...args: any[]) { this._write('error', args); },
+      warn(...args: any[]) { this._write('warn', args); },
+      info(...args: any[]) { this._write('info', args); },
+      debug(...args: any[]) { this._write('debug', args); },
+    };
   }
 
   interrupt() {
