@@ -75,14 +75,14 @@ body {
 }
 
 #input-area {
-  padding: 8px;
+  padding: 12px;
+  gap: 12px;
   background-color: var(--bg0);
   border-top: 1px solid var(--bg1);
   display: flex;
   position: sticky;
   bottom: 0;
   align-items: stretch;
-  gap: 8px;
 }
 
 #input {
@@ -151,6 +151,7 @@ body {
   font-family: monospace;
   font-size: 13px;
   max-width: 95%;
+  min-width: 300px;
 }
 
 .message.tool .msg-content {
@@ -195,6 +196,62 @@ body {
   font-family: monospace;
   font-size: 12px;
   padding: 2px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tool-call-label {
+  white-space: nowrap;
+}
+
+.tool-header {
+  display: block;
+  color: var(--tool);
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 600;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--bg2);
+  margin-bottom: 4px;
+}
+
+.tool-call-diff {
+  margin: 4px 0 0 8px;
+  font-size: 11px;
+  max-width: 100%;
+}
+
+.tool-result-diff {
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.diff-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  font-family: monospace;
+  font-size: inherit;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.diff-old {
+  background: rgba(220, 50, 50, 0.15);
+  color: #f08080;
+  padding: 4px 8px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.diff-new {
+  background: rgba(50, 180, 80, 0.15);
+  color: #80d080;
+  padding: 4px 8px;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 .message.streaming .msg-content::after {
