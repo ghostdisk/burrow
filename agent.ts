@@ -47,8 +47,7 @@ export async function buildSystemPrompt(): Promise<string> {
   return systemPromptCache;
 }
 
-// Synchronous fallback for backward compatibility (no skills section).
-const systemPrompt = basePrompt;
+
 
 const INTERRUPT_NOTE = "\n\n[User interrupted this request]";
 
@@ -62,7 +61,7 @@ export class Agent {
     this.tools = tools;
     this.ui = ui;
     this.messages = messages ?? [
-      { role: 'system', content: systemPrompt },
+      { role: 'system', content: basePrompt },
     ];
   }
 
