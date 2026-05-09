@@ -1,4 +1,4 @@
-import { systemPrompt, Agent } from "./agent";
+import { systemPrompt, Agent, AgentUI } from "./agent";
 import { Message } from "./llm";
 import * as readline from 'node:readline/promises';
 import { stdin, stdout } from "node:process";
@@ -25,7 +25,30 @@ if (!(globalThis as any).burrowCLI) {
 }
 state = (globalThis as any).burrowCLI as any;
 
+const agentUI: AgentUI = {
+  onStream: (data, delta) => {
+    if (delta.reasoning_content) {
+      print(delta.reasoning_content, 'thinking');
+    }
+    if (delta.content) {
+      print(delta.content, 'content');
+    }
+    if (delta.tool_calls) {
+      for (const tc of delta.tool_calls) {
+        if (tc.function.name) {
+          printNewLine(1);
+          print(`- ${tc.function.name} `, 'tool-call')
+        }
+        if (tc.function.arguments) {
+          print(`${tc.function.arguments}`, 'tool-call')
+        }
+      }
+    }
+  },
+};
+
 if (!state.agent) state.agent = new Agent();
+state.agent.ui = agentUI;
 if (!state.rl) state.rl = readline.createInterface({ input: stdin, output: stdout });
 if (!state.writeQueue) state.writeQueue = [];
 if (!state.lastWritePromise) state.lastWritePromise = Promise.resolve();
@@ -118,25 +141,6 @@ for (;;) {
   });
 
   await state.agent.run({
-    onStream: (data, delta) => {
-      if (delta.reasoning_content) {
-        print(delta.reasoning_content, 'thinking');
-      }
-      if (delta.content) {
-        print(delta.content, 'content');
-      }
-      if (delta.tool_calls) {
-        for (const tc of delta.tool_calls) {
-          if (tc.function.name) {
-            printNewLine(1);
-            print(`- ${tc.function.name} `, 'tool-call')
-          }
-          if (tc.function.arguments) {
-            print(`${tc.function.arguments}`, 'tool-call')
-          }
-        }
-      }
-    },
     onMessage: (msg: Message, opts) => {
       if (opts?.interrupted) {
         printNewLine(2);

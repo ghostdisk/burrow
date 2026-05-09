@@ -14,6 +14,10 @@ const tools: Record<string, Tool> = {
   eval: eval_js,
 };
 
+export interface AgentUI {
+  onStream: LLMStreamCallback;
+}
+
 export const systemPrompt =
 `You are Burrow 🐰, a friendly AI agent.
 
@@ -42,11 +46,13 @@ const INTERRUPT_NOTE = "\n\n[User interrupted this request]";
 
 export class Agent {
   messages: Message[];
+  ui?: AgentUI;
   private currentInterrupt: (() => void) | null = null;
   private tools: Record<string, Tool>;
 
-  constructor(messages?: Message[]) {
+  constructor(messages?: Message[], ui?: AgentUI) {
     this.tools = tools;
+    this.ui = ui;
     this.messages = messages ?? [
       { role: 'system', content: systemPrompt },
     ];
@@ -60,10 +66,8 @@ export class Agent {
   }
 
   async run({
-    onStream,
     onMessage,
   }: {
-    onStream?: LLMStreamCallback;
     onMessage: (message: Message, opts: Record<string, any>) => void;
   }) {
     while (true) {
@@ -72,7 +76,7 @@ export class Agent {
       const llmCall = llm({
         messages: this.messages,
         tools: Object.values(this.tools),
-        onStream,
+        onStream: this.ui?.onStream,
         thinking: true,
       });
 
