@@ -13,7 +13,7 @@ Burrow is a minimalist AI agent built with **Bun** and **TypeScript**, powered b
   - `edit_file` — precise string-based find-and-replace
   - `bash` — run shell commands with configurable cwd and timeout
   - `eval` — execute arbitrary JS in-process with REPL-like persistent scope
-- **Browser automation** — search engines, read pages, extract data via Playwright (Chromium)
+- **Browser automation** — search engines, read pages, extract data (via optional Playwright module)
 - **Thinking mode** — see the agent's reasoning in real time
 - **Persistent conversations** — save and resume sessions via JSON files
 - **Streaming output** — color-coded ANSI output for thinking, tool calls, content, and errors
@@ -23,7 +23,6 @@ Burrow is a minimalist AI agent built with **Bun** and **TypeScript**, powered b
 ### Prerequisites
 
 - [Bun](https://bun.sh) ≥ 1.3
-- [Chromium](https://www.chromium.org/) (e.g. `apt install chromium`)
 - A DeepSeek API key
 
 ### Setup
@@ -64,7 +63,7 @@ burrow/
 │   ├── edit_file.ts  # Find-and-replace editing
 │   └── bash.ts       # Shell command execution
 ├── js/
-│   └── browser.js    # Playwright browser automation helpers
+│   └── browser.js    # Optional Playwright browser automation helpers
 ├── .env              # API key (gitignored)
 └── package.json
 ```
