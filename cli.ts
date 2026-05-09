@@ -4,57 +4,79 @@ import * as readline from 'node:readline/promises';
 import { stdin, stdout } from "node:process";
 import fs from 'node:fs/promises';
 
-const sessionFile = process.argv[2];
+type PrintMode = 'none' | 'thinking' | 'tool-call' | 'content' | 'error' | 'user';
 
-let agent = new Agent();
+type BurrowCLIState = {
+  agent?: Agent,
+  rl: readline.Interface,
+  writeQueue: string[],
+  lastWritePromise: Promise<unknown>,
+  sessionFile?: string,
+  printMode?: PrintMode,
+  newlines: number,
+  escBound: boolean,
+};
 
-if (sessionFile) {
-  try {
-    const data = await fs.readFile(sessionFile, { encoding: 'utf-8' });
-    agent.messages = JSON.parse(data);
-    console.log(`Loaded session from ${sessionFile} (${agent.messages.length} messages).`);
-  } catch (err: any) {
-    if (err.code === 'ENOENT') {
-      agent.messages = [
-        { role: 'system', content: systemPrompt },
-      ];
-      console.log(`Starting new session (will save to ${sessionFile}).`);
-    } else {
-      console.error(`Error loading ${sessionFile}:`, err.message);
-      process.exit(1);
+let state: BurrowCLIState = null!;
+
+// init with hot-reload support
+if (!(globalThis as any).burrowCLI) {
+  (globalThis as any).burrowCLI = {};
+}
+state = (globalThis as any).burrowCLI as any;
+
+if (!state.agent) state.agent = new Agent();
+if (!state.rl) state.rl = readline.createInterface({ input: stdin, output: stdout });
+if (!state.writeQueue) state.writeQueue = [];
+if (!state.lastWritePromise) state.lastWritePromise = Promise.resolve();
+if (!state.printMode) state.printMode = 'none';
+if (state.newlines === undefined) state.newlines = 2;
+if (state.escBound === undefined) state.escBound = false;
+
+if (!state.sessionFile) {
+  state.sessionFile = process.argv[2];
+
+  if (state.sessionFile) {
+    try {
+      const data = await fs.readFile(state.sessionFile, { encoding: 'utf-8' });
+      state.agent.messages = JSON.parse(data);
+      console.log(`Loaded session from ${state.sessionFile} (${state.agent.messages.length} messages).`);
+    } catch (err: any) {
+      if (err.code === 'ENOENT') {
+        state.agent.messages = [
+          { role: 'system', content: systemPrompt },
+        ];
+        console.log(`Starting new session (will save to ${state.sessionFile}).`);
+      } else {
+        console.error(`Error loading ${state.sessionFile}:`, err.message);
+        process.exit(1);
+      }
     }
+  } else {
+    state.agent.messages = [
+      { role: 'system', content: systemPrompt },
+    ];
   }
-} else {
-  agent.messages = [
-    { role: 'system', content: systemPrompt },
-  ];
 }
 
-type PrintMode = 'none' | 'thinking' | 'tool-call' | 'content' | 'error' | 'user';
-let printMode: PrintMode = 'none';
-let newlines = 2;
-const rl = readline.createInterface({ input: stdin, output: stdout });
-
-let writeQueue: string[] = [];
-let lastWritePromise: Promise<unknown> = Promise.resolve();
 
 function printRaw(str: string) {
-  writeQueue.push(str);
-  lastWritePromise = lastWritePromise.then(() => Bun.stdout.write(str));
+  state.writeQueue.push(str);
+  state.lastWritePromise = state.lastWritePromise.then(() => Bun.stdout.write(str));
 }
 
 function printNewLine(max: number = 1) {
-  for (; newlines < max; newlines++) {
+  for (; state.newlines < max; state.newlines++) {
     printRaw('\n');
   }
 }
 
 function print(text: string, newMode: PrintMode) {
-  if (newMode !== printMode) {
+  if (newMode !== state.printMode) {
     printNewLine(2);
-    if (printMode != 'none') printRaw('\x1b[0m');
+    if (state.printMode != 'none') printRaw('\x1b[0m');
 
-    printMode = newMode;
+    state.printMode = newMode;
     switch (newMode) {
       case 'thinking': { printRaw('\x1b[2m'); break; }
       case 'tool-call': { printRaw('\x1b[32m'); break; }
@@ -64,28 +86,38 @@ function print(text: string, newMode: PrintMode) {
     }
   }
   printRaw(text);
-  newlines = 0;
+  state.newlines = 0;
 }
 
-stdin.on('data', function (data: Buffer) {
-  if (data.length === 1 && data[0] === 0x1b) {
-    agent.interrupt();
+if (!state.escBound) {
+  state.escBound = true;
+  stdin.on('data', function (data: Buffer) {
+    if (data.length === 1 && data[0] === 0x1b) {
+      state.agent?.interrupt();
+    }
+  });
+}
+
+process.on('SIGINT', () => {
+  if (stdin.isTTY && typeof stdin.setRawMode === 'function') {
+    stdin.setRawMode(false);
   }
+  process.exit(0);
 });
 
 for (;;) {
   print('', 'user');
-  await lastWritePromise;
+  await state.lastWritePromise;
 
-  const userMessage = await rl.question('> ');
-  newlines++;
+  const userMessage = await state.rl.question('> ');
+  state.newlines++;
 
-  agent.messages.push({
+  state.agent.messages.push({
     role: 'user',
     content: userMessage,
   });
 
-  await agent.run({
+  await state.agent.run({
     onStream: (data, delta) => {
       if (delta.reasoning_content) {
         print(delta.reasoning_content, 'thinking');
@@ -117,7 +149,7 @@ for (;;) {
     },
   });
 
-  if (sessionFile) {
-    await fs.writeFile(sessionFile, JSON.stringify(agent.messages, null, 2), { encoding: 'utf-8' });
+  if (state.sessionFile) {
+    await fs.writeFile(state.sessionFile, JSON.stringify(state.agent.messages, null, 2), { encoding: 'utf-8' });
   }
 }
