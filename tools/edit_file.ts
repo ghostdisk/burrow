@@ -26,7 +26,7 @@ export const edit_file: Tool = {
     },
     required: ['path', 'old_string', 'new_string'],
   },
-  call: async (args: any): Promise<Message> => {
+  call: async (args: any, _agent: any): Promise<Message> => {
     try {
       const content = await fs.readFile(args.path, { encoding: 'utf-8' });
 

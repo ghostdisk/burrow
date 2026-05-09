@@ -21,7 +21,7 @@ export const read_file: Tool = {
       },
     },
   },
-  call: async (args: any): Promise<Message> => {
+  call: async (args: any, _agent: any): Promise<Message> => {
     try {
       const resp = await fs.readFile(args.path, { encoding: 'utf-8' });
       let lines = resp.split('\n');

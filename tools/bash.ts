@@ -23,7 +23,7 @@ export const bash: Tool = {
     },
     required: ['command'],
   },
-  call: async (args: any): Promise<Message> => {
+  call: async (args: any, _agent: any): Promise<Message> => {
     const timeout = args.timeout ?? 30000;
     const cwd = args.cwd ?? process.cwd();
 

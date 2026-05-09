@@ -23,7 +23,7 @@ export const write_file: Tool = {
     },
     required: ['path', 'content'],
   },
-  call: async (args: any): Promise<Message> => {
+  call: async (args: any, _agent: any): Promise<Message> => {
     try {
       if (args.create_dirs !== false) {
         const dir = path.dirname(args.path);

@@ -1,4 +1,4 @@
-import { buildSystemPrompt, Agent, AgentUI } from "./agent";
+import { Agent, AgentUI, initAgent, systemPrompt } from "./agent";
 import { Message } from "./llm";
 import * as readline from 'node:readline/promises';
 import { stdin, stdout } from "node:process";
@@ -7,7 +7,7 @@ import fs from 'node:fs/promises';
 type PrintMode = 'none' | 'thinking' | 'tool-call' | 'content' | 'error' | 'user';
 
 type BurrowCLIState = {
-  agent?: Agent,
+  agent: Agent,
   rl: readline.Interface,
   writeQueue: string[],
   lastWritePromise: Promise<unknown>,
@@ -19,11 +19,6 @@ type BurrowCLIState = {
 
 let state: BurrowCLIState = null!;
 
-// init with hot-reload support
-if (!(globalThis as any).burrowCLI) {
-  (globalThis as any).burrowCLI = {};
-}
-state = (globalThis as any).burrowCLI as any;
 
 const agentUI: AgentUI = {
   onStream: (data, delta) => {
@@ -46,44 +41,6 @@ const agentUI: AgentUI = {
     }
   },
 };
-
-if (!state.agent) state.agent = new Agent();
-state.agent.ui = agentUI;
-if (!state.rl) state.rl = readline.createInterface({ input: stdin, output: stdout });
-if (!state.writeQueue) state.writeQueue = [];
-if (!state.lastWritePromise) state.lastWritePromise = Promise.resolve();
-if (!state.printMode) state.printMode = 'none';
-if (state.newlines === undefined) state.newlines = 2;
-if (state.escBound === undefined) state.escBound = false;
-
-if (!state.sessionFile) {
-  state.sessionFile = process.argv[2];
-
-  const prompt = await buildSystemPrompt();
-
-  if (state.sessionFile) {
-    try {
-      const data = await fs.readFile(state.sessionFile, { encoding: 'utf-8' });
-      state.agent.messages = JSON.parse(data);
-      console.log(`Loaded session from ${state.sessionFile} (${state.agent.messages.length} messages).`);
-    } catch (err: any) {
-      if (err.code === 'ENOENT') {
-        state.agent.messages = [
-          { role: 'system', content: prompt },
-        ];
-        console.log(`Starting new session (will save to ${state.sessionFile}).`);
-      } else {
-        console.error(`Error loading ${state.sessionFile}:`, err.message);
-        process.exit(1);
-      }
-    }
-  } else {
-    state.agent.messages = [
-      { role: 'system', content: prompt },
-    ];
-  }
-}
-
 
 function printRaw(str: string) {
   state.writeQueue.push(str);
@@ -114,23 +71,72 @@ function print(text: string, newMode: PrintMode) {
   state.newlines = 0;
 }
 
-if (!state.escBound) {
-  state.escBound = true;
-  stdin.on('data', function (data: Buffer) {
-    if (data.length === 1 && data[0] === 0x1b) {
-      state.agent?.interrupt();
+
+async function init() {
+  // init with hot-reload support
+  if (!(globalThis as any).burrowCLI) 
+    (globalThis as any).burrowCLI = {};
+  state = (globalThis as any).burrowCLI as any;
+
+  if (!state.escBound) {
+    state.escBound = true;
+    stdin.on('data', function (data: Buffer) {
+      if (data.length === 1 && data[0] === 0x1b) {
+        state.agent?.interrupt();
+      }
+    });
+  }
+  process.on('SIGINT', () => {
+    if (stdin.isTTY && typeof stdin.setRawMode === 'function') {
+      stdin.setRawMode(false);
     }
+    process.exit(0);
   });
+
+  await initAgent();
+
+  if (!state.rl) state.rl = readline.createInterface({ input: stdin, output: stdout });
+  if (!state.writeQueue) state.writeQueue = [];
+  if (!state.lastWritePromise) state.lastWritePromise = Promise.resolve();
+  if (!state.printMode) state.printMode = 'none';
+  if (state.newlines === undefined) state.newlines = 2;
+  if (state.escBound === undefined) state.escBound = false;
+
+  if (!state.agent) state.agent = new Agent({ messages: [], ui: agentUI });
+  state.agent.ui = agentUI;
+
+  if (!state.sessionFile) {
+    state.sessionFile = process.argv[2];
+
+    if (state.sessionFile) {
+      try {
+        const data = await fs.readFile(state.sessionFile, { encoding: 'utf-8' });
+        state.agent.messages = JSON.parse(data);
+        console.log(`Loaded session from ${state.sessionFile} (${state.agent.messages.length} messages).`);
+      } catch (err: any) {
+        if (err.code === 'ENOENT') {
+          state.agent.messages = [
+            { role: 'system', content: systemPrompt },
+          ];
+          console.log(`Starting new session (will save to ${state.sessionFile}).`);
+        } else {
+          console.error(`Error loading ${state.sessionFile}:`, err.message);
+          process.exit(1);
+        }
+      }
+    } else {
+      state.agent.messages = [
+        { role: 'system', content: systemPrompt },
+      ];
+    }
+  }
 }
 
-process.on('SIGINT', () => {
-  if (stdin.isTTY && typeof stdin.setRawMode === 'function') {
-    stdin.setRawMode(false);
-  }
-  process.exit(0);
-});
+const initPromise = init();
 
 for (;;) {
+  await initPromise;
+
   print('', 'user');
   await state.lastWritePromise;
 

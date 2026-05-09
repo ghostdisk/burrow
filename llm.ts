@@ -34,7 +34,7 @@ export type Tool = {
   name: string,
   description: string,
   parameters: any,
-  call: (args: any) => Promise<Message>,
+  call: (args: any, agent: any) => Promise<Message>,
 };
 
 export function llm({ tools, messages, thinking, onStream }: LLMOpptions): LLMResponse {

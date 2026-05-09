@@ -20,7 +20,7 @@ export interface AgentUI {
   onStream: LLMStreamCallback;
 }
 
-const basePrompt =
+export let systemPrompt =
 `You are Burrow 🐰, a friendly AI agent.
 
 Be helpful, precise, and concise. You thrive on solving real tasks.
@@ -34,48 +34,88 @@ Location of your source code: ${import.meta.dir}
 `;
 
 const SKILLS_DIR = path.join(import.meta.dir, 'skills');
-
-let systemPromptCache: string | null = null;
-
-export async function buildSystemPrompt(): Promise<string> {
-  if (systemPromptCache) return systemPromptCache;
-
-  const skills = await discoverSkills(SKILLS_DIR);
-  const skillsSection = formatSkillsPrompt(skills, SKILLS_DIR);
-
-  systemPromptCache = basePrompt + '\n' + skillsSection;
-  return systemPromptCache;
-}
-
-
-
 const INTERRUPT_NOTE = "\n\n[User interrupted this request]";
+
+// Root context sits between globalThis and agent contexts.
+// Bare assignments in eval write to the agent's context, shadowing members of rootContext/globalThis.
+// Use rootContext.shared for intentional cross-agent communication.
+export const rootContext: Record<string, any> = Object.create(globalThis);
+rootContext.shared = Object.create(null);
+
+let initialized = false;
 
 export class Agent {
   messages: Message[];
+  currentStreamingMessage?: Partial<Message>;
   ui?: AgentUI;
-  private currentInterrupt: (() => void) | null = null;
-  private tools: Record<string, Tool>;
 
-  constructor(messages?: Message[], ui?: AgentUI) {
+  private _currentInterrupt?: (() => void);
+  private _currentToolCall?: string;
+  private tools: Record<string, Tool>;
+  private _runPromise?: Promise<void>;
+
+  context: Record<string, any>;
+
+  constructor({ messages, ui }: { messages: Message[], ui?: AgentUI }) {
+    if (!initialized)
+      throw new Error("Attempting to create an agent before initAgent() is finished.");
+
     this.tools = tools;
     this.ui = ui;
-    this.messages = messages ?? [
-      { role: 'system', content: basePrompt },
-    ];
+    this.messages = messages;
+    this.context = Object.create(rootContext);
   }
 
   interrupt() {
-    if (this.currentInterrupt) {
-      this.currentInterrupt();
-      this.currentInterrupt = null;
+    if (this._currentInterrupt) {
+      this._currentInterrupt();
+      delete this._currentInterrupt;
+      delete this._runPromise;
     }
   }
 
-  async run({
-    onMessage,
-  }: {
-    onMessage: (message: Message, opts: Record<string, any>) => void;
+  // Run an iteration of the loop. This loops until a response without tool calls is reached.
+  // Don't use onMessage, it's WIP and doesn't do what you expect, instead await and read agent.messages.
+  async run({ onMessage }: {
+    onMessage?: (message: Message, opts: Record<string, any>) => void;
+  } = {}) {
+    if (this._runPromise) {
+      return this._runPromise;
+    }
+    this._runPromise = this._run({ onMessage }).then(() => { delete this._runPromise; });
+    return this._runPromise;
+  }
+
+  wait(opts?: { timeout?: number }): Promise<{ completed: boolean; message?: string }> {
+    if (!this._runPromise) return Promise.resolve({ completed: true });
+
+    if (opts?.timeout) {
+      return Promise.race([
+        this._runPromise.then(() => ({ completed: true } as const)),
+        new Promise<{ completed: boolean; message: string }>((resolve) =>
+          setTimeout(() => {
+            let msg = `timed out after ${opts.timeout}s.`;
+            if (this.currentStreamingMessage) {
+              const tail = JSON.stringify(this.currentStreamingMessage).slice(-200);
+              msg += ` tail of currently streamed message: ...${tail}`;
+            } else if (this._currentToolCall) {
+              msg += ` currently executing tool: ${this._currentToolCall}`;
+            }
+            resolve({ completed: false, message: msg });
+          }, opts.timeout! * 1000)
+        ),
+      ]);
+    } else {
+      return this._runPromise.then(() => ({ completed: true }));
+    }
+  }
+
+  get done(): boolean {
+    return !this._runPromise;
+  }
+
+  private async _run({ onMessage }: {
+    onMessage?: (message: Message, opts: Record<string, any>) => void;
   }) {
     while (true) {
       let loop = false;
@@ -83,13 +123,17 @@ export class Agent {
       const llmCall = llm({
         messages: this.messages,
         tools: Object.values(this.tools),
-        onStream: this.ui?.onStream,
+        onStream: (msg, delta) => {
+          this.currentStreamingMessage = msg;
+          this.ui?.onStream?.(msg, delta);
+        },
         thinking: true,
       });
 
-      this.currentInterrupt = llmCall.interrupt;
+      this._currentInterrupt = llmCall.interrupt;
       const { message, interrupted } = await llmCall.wait();
-      this.currentInterrupt = null;
+      delete this._currentInterrupt;
+      delete this.currentStreamingMessage;
 
       if (interrupted) {
         // Strip tool_calls since they won't be executed.
@@ -122,29 +166,32 @@ export class Agent {
               tool_call_id: tc.id,
               content: `error: tool "${tc.function.name}" does not exist`,
             };
-            onMessage(msg, { error: true });
+            onMessage?.(msg, { error: true });
             this.messages.push(msg);
             break;
           }
 
           try {
             const args = JSON.parse(tc.function.arguments) as any;
-            const response = await tool.call(args);
+            this._currentToolCall = tc.function.name;
+            const response = await tool.call(args, this);
+            delete this._currentToolCall;
 
             response.role = 'tool';
             response.tool_call_id = tc.id;
 
             if (tc.function.name === 'eval' || tc.function.name === 'bash') {
-              onMessage(response, { error: true });
+              onMessage?.(response, { error: true });
             }
             this.messages.push(response);
           } catch (err) {
+            delete this._currentToolCall;
             const msg: Message = {
               role: 'tool',
               tool_call_id: tc.id,
               content: `error during tool call :(\n${err}`,
             };
-            onMessage(msg, { error: true });
+            onMessage?.(msg, { error: true });
             this.messages.push(msg);
           }
         }
@@ -153,4 +200,15 @@ export class Agent {
       if (!loop) break;
     }
   }
+}
+
+export async function initAgent() {
+  if (initialized) return;
+
+  const skills = await discoverSkills(SKILLS_DIR);
+  const skillsSection = formatSkillsPrompt(skills, SKILLS_DIR);
+
+  systemPrompt = systemPrompt + '\n' + skillsSection;
+
+  initialized = true;
 }

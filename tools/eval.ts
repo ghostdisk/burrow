@@ -8,10 +8,26 @@ globalThis.burrowImport ??= (p: string) => {
   return import(p);
 };
 
+function makeContextProxy(agentContext: Record<string, any>) {
+  return new Proxy(agentContext, {
+    has(_target, _key) {
+      // Always claim we have it — so with() always sets on us,
+      // never falling through to outer scope / globalThis.
+      return true;
+    },
+    get(target, key, receiver) {
+      return Reflect.get(target, key, receiver);
+    },
+    set(target, key, value, receiver) {
+      return Reflect.set(target, key, value, receiver);
+    },
+  });
+}
+
 export const eval_js: Tool = {
   name: 'eval',
   description: `Execute arbitrary JavaScript code in the Bun process.
-Bare assignments are written to globalThis and persist among calls and hot reloads.
+Bare assignments are written to the agent's context (isolated per agent) and persist among calls and hot reloads.
 
 Note: dynamic import() resolves relative to tools/eval.ts, not cwd.
 Use burrowImport('./relative/path') to import relative to cwd instead.
@@ -31,11 +47,18 @@ Examples:
     },
     required: ['code'],
   },
-  call: async (args: any): Promise<Message> => {
+  call: async (args: any, agent: any): Promise<Message> => {
     const code: string = args.code;
 
     try {
-      const result = await (0, eval)(`(async () => { ${code} })()`);
+      const ctxProxy = makeContextProxy(agent.context);
+
+      // new Function() is non-strict, so `with` is allowed.
+      // The proxy's `has` trap always returns true, ensuring all bare
+      // assignments go to agent.context, not globalThis.
+      const wrappedCode = `return (async () => { with (arguments[0]) { ${code} } })();`;
+      const fn = new Function(wrappedCode);
+      const result = await fn(ctxProxy);
 
       return {
         role: 'tool',
